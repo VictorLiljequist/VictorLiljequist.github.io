@@ -1,0 +1,46 @@
+body {
+    margin: none;
+    padding: none;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.board-styling {
+    background-color: blue;
+    padding: 1rem;
+    border-radius: 20px;
+    display: inline-block;
+    color: white;
+}
+
+#board-parent {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 40px;
+    width: 80vw;
+    height: 8vh;
+    margin: 1% 0 1% 1%;
+}
+
+#board-tag {
+    border: 2px solid grey;
+    margin: none;
+    padding: 1%;
+    border-radius: 10px 0 0 10px;
+}
+
+#boards-selector {
+    font-size: 40px;
+    background-color: white;
+    border: 2px solid grey;
+    margin: none;
+    padding: 1%;
+    text-align: center;
+}
+
+#new-note {
+    font-size: 40px;
+    background-color: white;
+    border: 2px solid grey;
+    margin: none;
+}

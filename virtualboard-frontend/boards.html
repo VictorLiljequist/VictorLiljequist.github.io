@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boards</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 p-6">
+    <button class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 cursor-pointer" id="open-card-modal">New card</button>
+
+    <h1 class="text-3xl font-bold text-center">My Boards</h1>
+    <div id="boards-container" class="max-w-lg mx-auto space-y-6">
+        <div id="board-tag" class="text-lg font-semibold mb-4"></div>
+        <div class="flex space-x-4">
+            <select id="boards-selector" class="p-2 border border-gray-300 rounded-md w-full"></select>            
+            <input type="button" id="new-note" value="Add New Board" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 cursor-pointer" />
+        </div>
+    </div>
+
+    <div id="selected-board-container" class="max-w-lg mx-auto mt-8"></div>
+
+    <div id="card-modal" class="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center hidden">
+        <div class="bg-white shadow-md rounded-lg p-6 max-w-sm">
+            <h2 class="text-xl font-bold mb-4">Create New Card</h2>
+            <div class="space-y-4">
+                <input id="new-card-name" type="text" placeholder="Card name" class="p-2 border border-gray-300 rounded-md w-full" />
+                <input id="content" type="text" placeholder="Content" class="p-2 border border-gray-300 rounded-md w-full" />
+                <div class="flex justify-end space-x-2">
+                    <button id="cancel-card-btn" class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600">Cancel</button>
+                    <button id="create-card-btn" class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600">Create Card</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="cards-container"></div>
+<!--  
+    <details class="max-w-lg mx-auto mt-8 bg-white shadow-md rounded-lg p-6">
+        <summary class="text-lg font-semibold mb-2 cursor-pointer">Settings</summary>
+        <div class="space-y-4">
+            <input type="text" id="ws_token" placeholder="Token here" class="p-2 border border-gray-300 rounded-md w-full" />
+            <input type="text" id="server_url" placeholder="Server URL here" class="p-2 border border-gray-300 rounded-md w-full" />
+            <input type="button" id="save-btn" value="Save Token & URL" class="bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600 cursor-pointer w-full" />
+        </div>
+    </details>
+-->
+    <div id="websocket-test" class="max-w-lg mx-auto mt-8 p-6"></div>
+
+    <script src="./scripts/boards.js"></script>
+
+</body>
+
+</html>
