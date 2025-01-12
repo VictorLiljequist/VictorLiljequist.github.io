@@ -1,0 +1,4 @@
+{
+    "appService.defaultWebAppToDeploy": "undefined/subscriptions/7d39c417-9253-42e4-ae7d-c55997bf58ba/resourceGroups/victorfastigheter/providers/Microsoft.Web/sites/victorfastigheter",
+    "appService.deploySubpath": "."
+}
