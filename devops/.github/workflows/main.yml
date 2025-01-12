@@ -1,0 +1,61 @@
+name: Docker Image CI
+
+on:
+  push:
+    branches:
+      - main
+      - v1
+      - v2
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # Step 1: Checkout the code
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # Step 2: Set up JDK 17 (or your version)
+      - name: Set up JDK 17
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+    
+      # Step 3: Build with Maven
+      - name: Build with Maven
+        run: mvn clean package
+
+      # Step 4: Run tests with Maven
+      - name: Run tests
+        run: mvn test
+
+      # Step 5: Log in to Docker Hub
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # Step 6: Set the Docker image tag based on the branch
+      - name: Set up image tag
+        id: set_image_tag
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "IMAGE_TAG=vikitoto/library-app:latest" >> $GITHUB_ENV
+          elif [[ "${{ github.ref }}" == "refs/heads/v1" ]]; then
+            echo "IMAGE_TAG=vikitoto/library-app:v1" >> $GITHUB_ENV
+          elif [[ "${{ github.ref }}" == "refs/heads/v2" ]]; then
+            echo "IMAGE_TAG=vikitoto/library-app:v2" >> $GITHUB_ENV
+          else
+            echo "IMAGE_TAG=vikitoto/library-app:dev" >> $GITHUB_ENV  # Default for other branches
+          fi
+
+      # Step 7: Build the Docker image
+      - name: Build Docker image
+        run: docker build . --file Dockerfile --tag ${{ env.IMAGE_TAG }}
+
+      # Step 8: Push the Docker image to Docker Hub
+      - name: Push Docker image
+        run: docker push ${{ env.IMAGE_TAG }}
