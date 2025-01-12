@@ -1,7 +1,7 @@
-const API_URL = "http://localhost:8080";
+const API_URL = 'https://virtualboard-api-h3bgghaga9f2ctg0.northeurope-01.azurewebsites.net'/* "http://localhost:8080";*/
 
 async function logIn(user, pass) {
-    console.log(user, pass);
+    //console.log(user, pass);
 
     try {
         const response = await fetch(`${API_URL}/users/login`, {
@@ -18,10 +18,10 @@ async function logIn(user, pass) {
         }
 
         const respData = await response.json();
-        console.log(respData);
+        //console.log(respData);
         const jwt_token = respData.jwt;
         localStorage.setItem('token', jwt_token);
-        window.location.href = 'http://127.0.0.1:5500/boards.html';
+        window.location.href = 'https://people.arcada.fi/~heikkihe/virtualboard-frontend/boards.html';
 
 
 

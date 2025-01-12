@@ -1,36 +1,43 @@
 if (!localStorage.getItem('token')) {
     alert("You are not logged in")
-    window.location.href = 'http://127.0.0.1:5501/index.html';
+    window.location.href = "https://people.arcada.fi/~heikkihe/virtualboard-frontend/index.html";
 }
 
-//let boards = [];  
+const API_URL = 'https://virtualboard-api-h3bgghaga9f2ctg0.northeurope-01.azurewebsites.net' /*"http://localhost:8080"*/
 
+document.querySelector('#user').innerHTML = getUserName();
+
+// Decode Jwt for username ChatGPT helped me with this
+function getUserName() {
+    const jwt_token = localStorage.getItem('token');
+    const [header, payload, signature] = jwt_token.split('.');
+    const decodedHeader = JSON.parse(atob(header));
+    const decodedPayload = JSON.parse(atob(payload));
+    return decodedPayload.name;
+}
+
+const themes = [
+    { background: 'linear-gradient(to right, #2193b0, #6dd5ed)', text: '#6dd5ed' },
+    { background: 'linear-gradient(to right, #cc2b5e, #753a88)', text: '#753a88' },
+    { background: 'linear-gradient(to right, #42275a, #734b6d)', text: '#734b6d' },
+    { background: 'linear-gradient(to right, #000428, #004e92)', text: '#004e92' },
+    { background: 'linear-gradient(to right, #ffafbd, #ffc3a0)', text: '#ffc3a0' },
+
+];
+
+let currentThemeIndex = 0;
+
+function toggleTheme() {
+    const cardElement = document.querySelector('.canvas');
+    cardElement.style.background = '';
+    currentThemeIndex = (currentThemeIndex + 1) % themes.length;
+    cardElement.style.background = themes[currentThemeIndex].background;
+    cardElement.style.color = themes[currentThemeIndex].text;
+}
+
+//let boards = []; 
 
 // Function to fetch boards from the backend
-async function fetchBoards() {
-    const token = localStorage.getItem('token');
-
-    try {
-        const response = await fetch('http://localhost:8080/boards', {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-            },
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        console.log("Boards fetched:", data);
-        boards = data.boards;  
-        console.log("Boards array:", boards); 
-        updateBoardsSelector(boards);
-    } catch (error) {
-        console.error("Error fetching boards:", error);
-    }
-}
-
 function updateBoardsSelector(boards) {
     const selector = document.getElementById('boards-selector');
     selector.innerHTML = '';
@@ -42,18 +49,15 @@ function updateBoardsSelector(boards) {
     });
 
     if (boards.length > 0) {
-        selector.value = boards[0].id; 
-        displayBoardCards(boards[0].cards); 
+        selector.value = boards[0].id;
+        displayBoardCards(boards[0].cards);
     }
-    
-    // Takes the necessary id's, names and such and creates a websocket connection
+
     const boardName = document.getElementById('boards-selector').options[selector.selectedIndex].text;
     const startBoard = document.getElementById('boards-selector').value;
-    console.log("Starting Board: " + startBoard + " " + boardName);
     // WebSocket connection
     connectWebSocket(startBoard, boardName, boards[0].cards);
 }
-
 
 // Function to create a new board
 async function createBoard() {
@@ -68,7 +72,7 @@ async function createBoard() {
     const token = localStorage.getItem('token');
 
     try {
-        const response = await fetch('http://localhost:8080/boards', {
+        const response = await fetch(`${API_URL}/boards`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -83,7 +87,7 @@ async function createBoard() {
         }
 
         const newBoard = await response.json();
-        console.log("Board created:", newBoard);
+        //console.log("Board created:", newBoard);
 
     } catch (error) {
         console.error("Error creating board:", error);
@@ -98,17 +102,19 @@ async function createCard() {
     const title = document.getElementById('new-card-name').value;
     const content = document.getElementById('content').value;
 
-    console.log("BoardId: " + boardId)
+    //console.log("BoardId: " + boardId)
 
     const cardData = {
         title: title,
         content: content,
+        xPosition: String(window.innerWidth / 2),
+        yPosition: String(window.innerHeight / 2),
     };
 
     const token = localStorage.getItem('token');
 
     try {
-        const response = await fetch(`http://localhost:8080/boards/${boardId}/cards`, {
+        const response = await fetch(`${API_URL}/boards/${boardId}/cards`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -123,10 +129,23 @@ async function createCard() {
         }
 
         const newCard = await response.json();
-        console.log("Card created:", newCard);
-        hideCardModal();  
-        await fetchCardsForBoard(boardId);
+        //console.log("Card created:", newCard);
 
+        const selectedBoard = boards.find(board => board.id === boardId);
+        if (selectedBoard) {
+            selectedBoard.cards.push(newCard);
+            displayBoardCards(selectedBoard.cards);
+        }
+
+        // Send new card to other clients
+        if (socket && socket.readyState === WebSocket.OPEN) {
+            newCard.type = 'createCard';
+            socket.send(JSON.stringify(newCard));
+        }
+        // Send to other clients
+        sendToClients(selectedBoard.cards, boardId)
+
+        hideCardModal();
     } catch (error) {
         console.error("Error creating card:", error);
     }
@@ -143,24 +162,24 @@ async function editCard(cardId) {
 
     const updateCardContent = async () => {
         const newTitle = titleElement.innerText;
-        const newContent = contentElement.innerText; 
+        const newContent = contentElement.value;
 
         const token = localStorage.getItem('token');
-        const boardId = document.getElementById('boards-selector').value; 
+        const boardId = document.getElementById('boards-selector').value;
 
         const updatedCardData = {
-            title: newTitle,   
-            content: newContent 
+            title: newTitle,
+            content: newContent
         };
 
         try {
-            const response = await fetch(`http://localhost:8080/boards/${boardId}/cards/${cardId}`, {
+            const response = await fetch(`${API_URL}/boards/${boardId}/cards/${cardId}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`,
                 },
-                body: JSON.stringify(updatedCardData), 
+                body: JSON.stringify(updatedCardData),
             });
 
             if (!response.ok) {
@@ -168,7 +187,7 @@ async function editCard(cardId) {
                 throw new Error(`HTTP error! Status: ${response.status}, Message: ${errorResponse.msg || "Unknown error"}`);
             }
 
-            console.log("Card updated:", { id: cardId, title: newTitle, content: newContent });
+            //console.log("Card updated:", { id: cardId, title: newTitle, content: newContent });
 
         } catch (error) {
             console.error("Error updating card:", error);
@@ -179,10 +198,39 @@ async function editCard(cardId) {
     contentElement.addEventListener('blur', updateCardContent);
 }
 
+async function fetchBoards() {
+    const token = localStorage.getItem('token');
 
-function displayBoardCards(cards, boardId) {
+    try {
+        const response = await fetch(`${API_URL}/boards`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        //console.log("Boards fetched:", data);
+        boards = data.boards;
+        //console.log("Boards array:", boards);
+        const selectedBoardId = document.getElementById('boards-selector').value;
+        updateBoardsSelector(boards);
+        loadCardPositions(selectedBoardId);
+
+    } catch (error) {
+        console.error("Error fetching boards:", error);
+    }
+}
+
+
+async function displayBoardCards(cards, boardId) {
     const cardContainer = document.getElementById('cards-container');
-    cardContainer.innerHTML = ''; 
+    
+    cardContainer.style.display = 'none';
+    cardContainer.innerHTML = '';
 
     if (cards.length === 0) {
         cardContainer.innerHTML = '<p>No cards available for this board.</p>';
@@ -193,43 +241,71 @@ function displayBoardCards(cards, boardId) {
         const cardElement = document.createElement('div');
         cardElement.setAttribute('id', card.id);
         cardElement.classList.add('bg-white', 'shadow-md', 'rounded-lg', 'p-4', 'mb-4', 'inline-block', 'm-3');
-        cardElement.setAttribute('draggable', 'true');
+        cardElement.setAttribute('draggable', 'false');
 
         cardElement.innerHTML = `
             <h3 class="text-lg font-bold" contenteditable="true" id="title-${card.id}">${card.title || 'Untitled'}</h3>
-            <p class="text-gray-600" contenteditable="true" id="content-${card.id}">${card.content || 'No content'}</p>
+            <textarea class="text-gray-600" contenteditable="true" rows='4' placeholder='Type your note or text here...' id="content-${card.id}">${card.content || 'No content'}</textarea>
+            <button onclick="deleteCard('${card.id}')">🗑️</button>
         `;
+
+
+        //Chatgpt hjälpte med drag funktionalitet
         let isDragging = false;
         let startX, startY, initialMouseX, initialMouseY;
 
         cardElement.addEventListener('mousedown', (event) => {
             const isEditableElement = event.target.closest('[contenteditable="true"]');
             if (isEditableElement) {
-                editCard(card.id); 
+                editCard(card.id);
+                return;
             }
 
-            isDragging = false; 
+            isDragging = false;
             startX = cardElement.offsetLeft;
             startY = cardElement.offsetTop;
             initialMouseX = event.clientX;
             initialMouseY = event.clientY;
 
+            let dx;
+            let dy;
+
             const onMouseMove = (moveEvent) => {
-                isDragging = true; 
-                const dx = moveEvent.clientX - initialMouseX;
-                const dy = moveEvent.clientY - initialMouseY;
+                isDragging = true;
+                dx = moveEvent.clientX - initialMouseX;
+                dy = moveEvent.clientY - initialMouseY;
 
                 cardElement.style.position = 'absolute';
                 cardElement.style.left = `${startX + dx}px`;
                 cardElement.style.top = `${startY + dy}px`;
-                event.preventDefault(); 
-                saveCardPositions(boardId);
+                event.preventDefault();
             };
 
             const onMouseUp = () => {
                 document.removeEventListener('mousemove', onMouseMove);
                 document.removeEventListener('mouseup', onMouseUp);
-                isDragging = false; 
+                if (isDragging) {
+                    saveCardPositions(boardId);
+                }
+                isDragging = false;
+
+                if (socket && socket.readyState === WebSocket.OPEN) {
+                    const cardPos = document.getElementById(card.id);
+                    const { left, top } = cardPos.getBoundingClientRect();
+                    const containerRect = document.getElementById('cards-container').getBoundingClientRect();
+
+                    const relativeLeft = left - containerRect.left;
+                    const relativeTop = top - containerRect.top;
+
+                    const updateCardPos = JSON.stringify({
+                        type: "moveCard",
+                        id: card.id,
+                        boardId: boardId,
+                        xPos: relativeLeft,
+                        yPos: relativeTop
+                    });
+                    socket.send(updateCardPos);
+                }
             };
 
             document.addEventListener('mousemove', onMouseMove);
@@ -239,56 +315,107 @@ function displayBoardCards(cards, boardId) {
         cardContainer.appendChild(cardElement);
     });
 
-    loadCardPositions(boardId);
+    await loadCardPositions(boardId);
+    cardContainer.style.display = 'block';
 }
 
-//CHATGPT HELPED ME WITH saveCardPositions() and loadCardPositions()
+async function saveCardPositions() {
+    const boardId = document.getElementById('boards-selector').value;
+    const token = localStorage.getItem('token');
 
-function saveCardPositions(boardId) {
-    const cardPositions = JSON.parse(localStorage.getItem('cardPositions')) || {};
-    
-    if (!cardPositions[boardId]) {
-        cardPositions[boardId] = {};
+    if (!token) {
+        console.error('Token is undefined. Please log in.');
+        return;
     }
 
     const cards = document.querySelectorAll('#cards-container > div');
-    cards.forEach(card => {
+    //Chatgpt hjälpte med att få card positions
+    for (const card of cards) {
         const cardId = card.id;
         const { left, top } = card.getBoundingClientRect();
-        
-        cardPositions[boardId][cardId] = { x: left, y: top };
-    });
+        const containerRect = document.getElementById('cards-container').getBoundingClientRect();
 
-    localStorage.setItem('cardPositions', JSON.stringify(cardPositions));
-}
+        const relativeLeft = left - containerRect.left;
+        const relativeTop = top - containerRect.top;
 
-function loadCardPositions(boardId) {
-    const savedPositions = JSON.parse(localStorage.getItem('cardPositions')) || {};
-    
-    if (savedPositions[boardId]) {
-        for (const cardId in savedPositions[boardId]) {
-            const card = document.getElementById(cardId);
-            if (card) {
-                const { x, y } = savedPositions[boardId][cardId];
-                card.style.position = 'absolute';
-                card.style.left = `${x}px`;
-                card.style.top = `${y}px`;
+        const cardPosition = {
+            id: cardId,
+            boardId: boardId,
+            xPosition: String(relativeLeft),
+            yPosition: String(relativeTop)
+        };
+
+        try {
+            const response = await fetch(`${API_URL}/boards/${boardId}/cards/${cardId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify(cardPosition)
+            });
+
+            if (response.ok) {
+                //console.log(cardPosition)
+                //console.log(`Card position for ID ${cardId} saved successfully!`);
+            } else {
+                const errorData = await response.json();
+                console.error(`Failed to save card position for ID ${cardId}:`, errorData);
             }
+        } catch (error) {
+            console.error(`Error saving card position for ID ${cardId}:`, error);
         }
     }
 }
 
-// WebSocket Part DO NOT DELETE!
-const WS_TOKEN = localStorage.getItem('token') //|| 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2NmZlM2I2M2U0OTUwZDQ3ZWJjZjM2Y2MiLCJlbWFpbCI6Imhlcm1lc0BlbWFpbC5jb20iLCJuYW1lIjoiSGVybWVzIiwicm9sZSI6InVzZXIiLCJpYXQiOjE3MjgwNTcyMzIsImV4cCI6MTczMDY0OTIzMn0.MYl3IXAPpCC--AhOzSshcLKyY62G7Lb3Wh5BnaODhjw' // TODO: JWT TOKEN HIT
-const WS_URL = localStorage.getItem('server_url') || "ws://localhost:8081" // Samma som API_URL i princip, länken till websocket servern
+
+
+async function loadCardPositions() {
+    const token = localStorage.getItem('token');
+    try {
+        const response = await fetch(`${API_URL}/boards`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+            }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+
+            data.boards.forEach(board => {
+                const cards = board.cards;
+
+                cards.forEach(({ id, xPosition, yPosition }) => {
+                    const card = document.getElementById(id);
+                    if (card) {
+                        card.style.position = 'absolute';
+                        card.style.left = `${parseFloat(xPosition)}px`;
+                        card.style.top = `${parseFloat(yPosition)}px`;
+                    }
+                });
+            });
+        } else {
+            const errorData = await response.json();
+            console.error('Failed to load card positions:', errorData);
+        }
+    } catch (error) {
+        console.error('Error loading card positions:', error);
+    }
+}
+
+const WS_TOKEN = localStorage.getItem('token');
+const WS_URL = 'wss://virtualboard-ws.azurewebsites.net' //"ws://localhost:8081"
 
 let socket;
 
 function connectWebSocket(boardId, name, cards) {
-    
+
+    // ChatGPT helped me build parts of the WebSocket function but not the entire function
     // Checks if the user already has a connection to a board and if it has then remove it
     if (socket) {
-        console.log('Closing existing WebSocket connection');
+        //console.log('Closing existing WebSocket connection');
         socket.close();  // Close the existing connection before opening a new one
     }
 
@@ -299,66 +426,224 @@ function connectWebSocket(boardId, name, cards) {
     socket = new WebSocket(`${WS_URL}?token=${WS_TOKEN}&board_id=${boardId}`)
 
     socket.onopen = function (event) {
-        console.log(`Connected to WebSocket server on board id: ${boardId} Name: ${name}`);
+        //console.log(`Connected to WebSocket server on board id: ${boardId} Name: ${name}`);
+        document.getElementById('ws-conn').innerHTML = 'Connected'
         document.querySelector("#websocket-test").innerText = `Connected to WebSocket Server on board ${name}!`;
     };
 
-    /*
-    console.log(`Cards within the WS func:`)
-    console.log(cards)
-    console.log("-------------")
-    */
-    // Add all the card id's to an array and add eventlisteners for a simple
+    // WS message, updates the users page with new data
+    socket.onmessage = function (event) {
+
+        try {
+            // Try to parse the JSON
+            const data = JSON.parse(event.data);
+
+            // ChatGPT Helped me to use the type to check for what is being sent to handle different data
+            if (data.type === "updateCard") {
+                document.querySelector('#websocket-conn').innerHTML = `Connected on board ${name}`;
+                document.getElementById(`content-${data.cardId}`).value = data.content;
+                const selectedBoard = boards.find(board => board.id === boardId);
+                const cardToUpdate = selectedBoard.cards.find(card2 => card2.id === data.cardId);
+                if (cardToUpdate) {
+                    cardToUpdate.content = data.content;
+                }
+
+            } else if (data.type === "createCard") {
+
+                const selectedBoard = boards.find(board => board.id === data.boardId);
+                const selectedBoard2 = boards.find(board => board.id === boardId);
+                // Update view if the created card is on the same board as the client
+                if (data.boardId == boardId) {
+                    updateClientCards(data);
+                }
+
+                if (selectedBoard) {
+                    // Check if the card already exists
+                    const existingCardIndex = selectedBoard.cards.findIndex(card => card.id === data.id);
+                    if (existingCardIndex === -1) {
+                        // If the card does not exist, add it to the cards array
+                        selectedBoard.cards.push(data);
+                    }
+                    if (data.boardId != boardId) {
+                        sendToClients(selectedBoard2.cards, boardId);
+                    } else {
+                        sendToClients(selectedBoard.cards, data.boardId);
+                    }
+                }
+            
+            } else if (data.type === "deleteCard") {
+
+                const selectedBoard = boards.find(board => board.id === data.boardId);
+                const selectedBoard2 = boards.find(board => board.id === boardId);
+                // Update view if the created card is on the same board as the client
+                if (data.boardId == boardId) {
+                    removeCardFromClients(data);
+                }
+                if (selectedBoard) {
+                    const cardToBeDeleted = selectedBoard.cards.find(card => card.id === data.id);
+                    const index = selectedBoard.cards.indexOf(cardToBeDeleted);
+                    if (index > -1) {
+                        selectedBoard.cards.splice(index, 1);
+                    }
+                    if (data.boardId != boardId) {
+                        sendToClients(selectedBoard2.cards, boardId);
+                    } else {
+                        sendToClients(selectedBoard.cards, data.boardId);
+                    }
+                }
+            } else if (data.type === 'moveCard') {
+
+                updateCardPositions(data);
+            }
+            else {
+                document.querySelector('#websocket-conn').innerHTML = "Not Connected";
+            }
+
+        } catch (error) {
+            // Handle JSON parsing errors
+            console.error("Error parsing JSON:", error, "Message data:", event.data);
+            document.querySelector('#websocket-conn').innerHTML = "Received invalid JSON";
+        }
+    };
+
+    // Closes WS connection
+    socket.onclose = function (event) {
+        //console.log('Connection Closed');
+        document.getElementById('ws-conn').innerHTML = 'Not connected'
+        document.querySelector("#websocket-test").innerText = "Disconnected from WebSocket Server!";
+        
+    }
+    // Send to other clients
+    sendToClients(cards, boardId)
+}
+
+function updateClientCards(newCard) {
+    const boardId = newCard.boardId;
+    delete newCard.boardId;
+    const selectedBoard = boards.find(board => board.id === boardId);
+
+    if (selectedBoard) {
+        const existingCard = selectedBoard.cards.find(card => card.id === newCard.id);
+        if (!existingCard) {
+            selectedBoard.cards.push(newCard);
+            const cardToUpdate = selectedBoard.cards.find(card2 => card2.id === newCard.id);
+            if (cardToUpdate) {
+                cardToUpdate.content = newCard.content;
+            }
+            displayBoardCards(selectedBoard.cards);
+        }
+    }
+}
+
+function removeCardFromClients(removedCard) {
+
+    const boardId = removedCard.boardId;
+    const selectedBoard = boards.find(board => board.id === boardId);
+
+    if (selectedBoard) {
+        const cardToBeDeleted = selectedBoard.cards.find(card => card.id === removedCard.id);
+        const index = selectedBoard.cards.indexOf(cardToBeDeleted);
+        if (index > -1) {
+            selectedBoard.cards.splice(index, 1);
+            displayBoardCards(selectedBoard.cards);
+        }
+    }
+}
+
+function updateCardPositions(card) {
+    const cardElement = document.getElementById(card.id)
+    if (cardElement) {
+        cardElement.style.position = 'absolute';
+        cardElement.style.left = `${parseFloat(card.xPos)}px`;
+        cardElement.style.top = `${parseFloat(card.yPos)}px`;
+    }
+}
+
+function sendToClients(cards, boardId) {
+
+    const selectedBoard = boards.find(board => board.id === boardId);
+
     let cardIds = [];
     cards.forEach((card) => {
         cardIds.push(card.id);
-        document.getElementById(card.id).addEventListener('click', () => {
-            console.log(`Card with ID ${card.id} and title ${card.title} was clicked!`)
+        document.getElementById(`content-${card.id}`).addEventListener('input', (evt) => {
+
+            const wsData = {
+                type: "updateCard",
+                status: 0,
+                content: evt.target.value,
+                cardId: card.id
+            }
+            const cardToUpdate = selectedBoard.cards.find(card2 => card2.id === card.id);
+            if (cardToUpdate) {
+                cardToUpdate.content = evt.target.value;
+            }
+            const serializedData = JSON.stringify(wsData);
+            socket.send(serializedData);
         })
     })
-
-    console.log(`Cards ids!: `)
-    console.log(cardIds);
-    console.log("-------------")
-
-
-    // Will be added when card functionality is done
-    socket.onmessage = function (event) {
-        console.log('Received message:', event.data);
-        const data = JSON.parse(event.data);
-
-        console.log(data)
-
-        if (data.status == 0) {
-            document.querySelector('#websocket-test').innerHTML = "Connected"
-            document.querySelector('#card').innerHTML = data.msg;
-        } else {
-            document.querySelector('#websocket-test').innerHTML = "Not Connected"
-        } 
-    };
-
-    socket.onclose = function (event) {
-        console.log('Connection Closed');
-        document.querySelector("#websocket-test").innerText = "Disconnected from WebSocket Server!";
-    }
-    // Send to other clients
-    /*cards.addEventListener('input', (evt) => {
-        socket.send(evt.target.value);    
-        })
-    */
 }
 
-function reconnectWebSocket() {
+// Work in prog....
+function reconnectWebSocket(boardId, boardName, cards) {
     console.log("Trying to connect...")
-    connectWebSocket()
+    connectWebSocket(boardId, boardName, cards);
 }
 
 document.getElementById('new-note').addEventListener('click', createBoard);
 document.getElementById('create-card-btn').addEventListener('click', createCard);
 
+//Function for deleting cards
+async function deleteCard(cardId) {
+    const boardId = document.getElementById('boards-selector').value;
+    const token = localStorage.getItem('token');
+
+    try {
+        const response = await fetch(`${API_URL}/boards/${boardId}/cards/${cardId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+            },
+        });
+        if (!response.ok) {
+            throw new Error(`Error: ${response.status} ${response.statusText}`);
+        }
+        const result = await response.json();
+        //console.log('Card deleted successfully:', result);
+        const selectedBoard = boards.find(board => board.id === boardId);
+        if (selectedBoard) {
+            selectedBoard.cards = selectedBoard.cards.filter(card => card.id !== cardId);
+            displayBoardCards(selectedBoard.cards);
+        }
+
+        // WS Delete
+        const deletedCard = {
+            type: 'deleteCard',
+            id: cardId,
+            boardId: boardId
+        }
+
+        // Send info on which card i deleted
+        if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify(deletedCard));
+        }
+
+        sendToClients(selectedBoard.cards, boardId)
+    } catch (error) {
+        console.error('Failed to delete card:', error);
+    }
+}
+
 function openCardModal() {
     const cardModal = document.getElementById('card-modal');
     cardModal.classList.remove('hidden');
+    cardModal.style.zIndex = '1000';
+    const cardsToMoveBehind = document.querySelectorAll(".onClickHideCard");
+
+    cardsToMoveBehind.forEach(card => {
+        card.style.zIndex = '0';
+    });
 }
 
 function hideCardModal() {
@@ -370,17 +655,14 @@ document.getElementById('open-card-modal').addEventListener('click', openCardMod
 document.getElementById('create-card-btn').addEventListener('click', hideCardModal);
 document.getElementById('cancel-card-btn').addEventListener('click', hideCardModal);
 
-
 // Change websocket to connect to chosen board
 document.getElementById('boards-selector').addEventListener('change', (event) => {
-    const selectedBoardId = event.target.value; 
+    const selectedBoardId = event.target.value;
     const boardName = event.target.options[event.target.selectedIndex].text;
     //console.log(`Current board: ${selectedBoardId} Name: ${boardName}`);
     const selectedBoard = boards.find(board => String(board.id) === String(selectedBoardId));
     displayBoardCards(selectedBoard.cards);
     connectWebSocket(selectedBoardId, boardName, selectedBoard.cards);
-
 });
-
 
 fetchBoards();

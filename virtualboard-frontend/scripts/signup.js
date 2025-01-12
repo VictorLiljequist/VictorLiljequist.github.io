@@ -1,9 +1,9 @@
-const SERVER_URL = "http://localhost:8080";
+const SERVER_URL = 'https://virtualboard-api-h3bgghaga9f2ctg0.northeurope-01.azurewebsites.net'/*"http://localhost:8080"*/;
 
 function newUserData() {
     const userName = document.querySelector('#username').value;
     const email = document.querySelector('#email').value;
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/; // ChatGPT generated this regex
 
     const password = document.querySelector('#password').value;
 
@@ -52,7 +52,7 @@ async function signUp(userName, email, password) {
 
     if (json.status == 1) return document.querySelector('#signup-out').innerHTML = "Sign up failed";
 
-    document.querySelector('#signup-out').innerHTML = "Sign up successful! <a href='http://localhost:5501/index.html'>Login Here!</a>";
+    document.querySelector('#signup-out').innerHTML = "<a href='https://people.arcada.fi/~heikkihe/virtualboard-frontend/index.html' class='flex items-center justify-center text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800'>Sign up successful! Login Here!</a>";
 }
 
 document.querySelector('#signup-btn').addEventListener('click', newUserData);
