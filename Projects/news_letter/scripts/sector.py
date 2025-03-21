@@ -10,7 +10,7 @@ from selenium.webdriver.support import expected_conditions as EC
 
 # Set up Chrome options
 chrome_options = webdriver.ChromeOptions()
-chrome_options.add_argument("--headless")  # Run in headless mode
+chrome_options.add_argument("--headless")  
 chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("--disable-dev-shm-usage")
 
@@ -58,9 +58,9 @@ sector_df = sector_df.sort_values(by=y_col, ascending=False)
 
 def format_percentage(value):
     if value > 0:
-        return f"+{value:.1f}%"  # Add + sign for positive values
+        return f"+{value:.1f}%" 
     else:
-        return f"{value:.1f}%"   # Keep - sign for negative values
+        return f"{value:.1f}%"  
 
 sector_df[y_col] = sector_df[y_col].apply(format_percentage)
 
@@ -70,9 +70,9 @@ sector_df[y_col] = sector_df[y_col].apply(format_percentage)
 # Function to create plots
 def save_table_as_image(df, filename):
     table_width = 10
-    # Increase the vertical space by adjusting the figure height
-    row_height = 0.6  # Increase this value to add more space between rows
-    fig, ax = plt.subplots(figsize=(table_width, len(df) * row_height + 1))  # Dynamic height with more space
+   
+    row_height = 0.6 
+    fig, ax = plt.subplots(figsize=(table_width, len(df) * row_height + 1)) 
     ax.axis('tight')
     ax.axis('off')
 
