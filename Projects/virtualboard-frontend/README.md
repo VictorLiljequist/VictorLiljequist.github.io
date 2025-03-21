@@ -1,3 +1,1 @@
-# virtualboard-frontend
-
-## Frontend for Project 1 in a course
+# Virtualboard(like miroboard)project. Featuring login with jwt, DB connection, Websocket connection, REST API and electron app conversion
