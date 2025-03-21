@@ -1,1 +1,1 @@
-# Here im showcasing my school/hobby projects
+# Here I'm showcasing my school/hobby projects
