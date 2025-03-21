@@ -1,0 +1,187 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.action_chains import ActionChains
+
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders
+import time
+
+
+# Set up Chrome options
+chrome_options = Options()
+chrome_options.add_argument("--headless")  # Run in headless mode (without opening a browser window)
+
+# Provide path to your downloaded chromedriver
+service = Service(r'C:\chromedriver-win64\chromedriver.exe')  # Adjust the path to your chromedriver
+
+# Initialize WebDriver with Service object
+us_driver = webdriver.Chrome(service=service, options=chrome_options)
+eu_driver = webdriver.Chrome(service=service, options=chrome_options)
+news_driver = webdriver.Chrome(service=service, options=chrome_options)
+
+
+
+# Visit the target URL
+us_url = "https://www.cnbc.com/us-markets/"
+eu_url = "https://www.cnbc.com/europe-markets/"
+news_url = "https://www.cnbc.com/"
+
+us_driver.get(us_url)
+eu_driver.get(eu_url)
+news_driver.get(news_url)
+
+try:
+    WebDriverWait(us_driver, 10).until(
+        EC.presence_of_all_elements_located((By.CSS_SELECTOR, '.BasicTable-symbolName'))
+    )
+
+    WebDriverWait(us_driver, 10).until(
+        EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".BasicTable-quoteGain, .BasicTable-quoteDecline"))
+    )
+    
+
+    
+    WebDriverWait(eu_driver, 10).until(
+        EC.presence_of_all_elements_located((By.CSS_SELECTOR, '.BasicTable-symbolName'))
+    )
+    
+    WebDriverWait(eu_driver, 10).until(
+        EC.presence_of_all_elements_located((By.CSS_SELECTOR, ".BasicTable-quoteGain, .BasicTable-quoteDecline"))
+    )
+    
+    cnbc_button = WebDriverWait(news_driver, 10).until(
+        EC.element_to_be_clickable((By.CSS_SELECTOR, ".LatestNews-button"))
+    )
+
+
+
+# Scroll into view
+    news_driver.execute_script("arguments[0].scrollIntoView();", cnbc_button)
+    time.sleep(2)
+
+# Click using JavaScript to bypass obstacles
+    for _ in range(4):
+        news_driver.execute_script("arguments[0].click();", cnbc_button)
+        
+    # Get the elements containing the data you need
+    us_symbols = us_driver.find_elements(By.CSS_SELECTOR, '.BasicTable-symbolName')
+    us_gains = us_driver.find_elements(By.CSS_SELECTOR, ".BasicTable-quoteGain, .BasicTable-quoteDecline")
+    
+    eu_symbols = eu_driver.find_elements(By.CSS_SELECTOR, '.BasicTable-symbolName')
+    eu_gains = eu_driver.find_elements(By.CSS_SELECTOR, ".BasicTable-quoteGain, .BasicTable-quoteDecline")
+    
+    latest_news = news_driver.find_elements(By.CSS_SELECTOR, ".LatestNews-headline")
+    trending_news = news_driver.find_elements(By.CSS_SELECTOR, ".TrendingNowItem-title")
+
+
+    
+    us_symbols = us_symbols[1:]
+    us_gains = us_gains[2:]
+    
+    eu_symbols = eu_symbols[4:]
+    eu_gains = eu_gains[4:]
+
+    # Prepare output file
+    output_file = "market_data.txt"
+
+    with open(output_file, "w", encoding="utf-8") as file:
+        if us_symbols and us_gains:
+            for i, symbol in enumerate(us_symbols[:2]):  # Only process the first 2 symbols
+                symbol_text = symbol.text.strip()  # Get the symbol text and remove any surrounding spaces
+                point_gain = us_gains[2 * i].text.strip()  # Point gain (first occurrence)
+                percentage_gain = us_gains[2 * i + 1].text.strip()  # Percentage gain (second occurrence)
+
+                # Write the data to the file
+                file.write(f"{symbol_text}\n")
+                file.write(f"Point Gain: {point_gain}\n")
+                file.write(f"Percentage Gain: {percentage_gain}\n")
+                file.write("---------\n")
+        else:
+            print("fart")
+    # Check EU symbols and gains
+        if eu_symbols and eu_gains:
+            for i, symbol in enumerate(eu_symbols[:1]):  # Only process the first 2 symbols
+                symbol_text = symbol.text.strip()  # Get the symbol text and remove any surrounding spaces
+                point_gain = eu_gains[2 * i].text.strip()  # Point gain (first occurrence)
+                percentage_gain = eu_gains[2 * i + 1].text.strip()  # Percentage gain (second occurrence)
+                file.write(f"{symbol_text}\n")
+                file.write(f"Point Gain: {point_gain}\n")
+                file.write(f"Percentage Gain: {percentage_gain}\n")
+                file.write("---------\n")
+        else:
+            print("No EU data available.")
+        if trending_news:
+            file.write("CNBC TRENDING NEWS\n")
+            for i, news in enumerate(trending_news[:4]):  # Adjust the number as per your requirement
+                news_text = news.text.strip()
+                file.write("---------\n")
+                file.write(f"{news_text}\n")
+            
+        if latest_news:
+            file.write("---------\n")
+            file.write("CNBC LATEST NEWS\n")
+            for i, news in enumerate(latest_news[:29]):  # Adjust the number as per your requirement
+                news_text = news.text.strip()
+                file.write("---------\n")
+                file.write(f"{news_text}\n")
+        else:
+            print("No news data available.")
+
+except Exception as e:
+    print(f"Error: {e}")
+
+finally:
+    us_driver.quit()  # Close the browser when done
+    eu_driver.quit()  # Close the browser when done
+    news_driver.quit()  # Close the browser when done
+
+def sendEmail():
+    sender_email = "totosnewsbot@gmail.com"
+    receiver_email = "victor.liljequist@gmail.com"
+    password = "kovh mghi ohno epci"  # Use an app password, not your regular Gmail password
+    subject = "Market Report"
+    body = "Please find the attached market data report."
+    output_file = "market_data.txt"  # Ensure this file exists in the correct path
+
+    # Create the email message
+    msg = MIMEMultipart()
+    msg['From'] = sender_email
+    msg['To'] = receiver_email
+    msg['Subject'] = subject
+    msg.attach(MIMEText(body, 'plain'))
+
+    # Attach the text file
+    try:
+        with open(output_file, "rb") as attachment:
+            part = MIMEBase('application', 'octet-stream')
+            part.set_payload(attachment.read())
+        encoders.encode_base64(part)
+        part.add_header('Content-Disposition', f"attachment; filename={output_file}")
+        msg.attach(part)
+    except FileNotFoundError:
+        print(f"Error: {output_file} not found")
+        return
+
+    # Send the email
+    try:
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()  # Start TLS for security
+        server.login(sender_email, password)
+        text = msg.as_string()
+        server.sendmail(sender_email, receiver_email, text)
+        print("Email sent successfully!")
+    except Exception as e:
+        print(f"Error: {e}")
+    finally:
+        server.quit()
+
+#sendEmail()

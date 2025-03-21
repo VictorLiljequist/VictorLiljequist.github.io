@@ -1,0 +1,41 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import os
+
+# Load Data
+top_gainers_df = pd.read_csv("../csv/top_gainers_data.csv")
+
+# Ensure 'plots' directory exists
+os.makedirs("../plots", exist_ok=True)
+
+# Function to create plots
+def create_plot(df, title, x_col, y_col, filename, plot_type="bar"):
+    # Clean the Percentage Gain column: remove '%' and convert to numeric
+    df[y_col] = df[y_col].str.rstrip('%').astype(float)
+
+    plt.figure(figsize=(10, 6))
+    
+    if plot_type == "bar":
+        bars = plt.barh(df[x_col], df[y_col], color='green')  # Horizontal bar chart
+                
+        # Add text labels next to each bar
+        padding = 0.2
+        for bar in bars:
+            width = bar.get_width()  # Get the width of the bar (x value)
+            # Place the text label in the middle of the bar (beside it)
+            plt.text(width + padding, bar.get_y() + bar.get_height() / 2, f'{width:.2f}%', 
+                    va='center', ha='left', color='black')
+
+    edge_padding = 2  # Adjust this value to increase or decrease edge padding
+    plt.xlim(0, df[y_col].max() + edge_padding)  # Add padding to the right edge
+
+    plt.title(title)
+    plt.ylabel(x_col)  # Switched x and y labels
+    plt.xlabel(y_col)
+    plt.gca().invert_yaxis()  # Keeps highest values at the top
+    plt.tight_layout()
+    plt.savefig(filename)  # Save the plot as an image
+    plt.close()
+
+# Generate the plot
+create_plot(top_gainers_df, "Top Gainers", "Symbol", "Percentage Gain", "../plots/top_gainers.png")
