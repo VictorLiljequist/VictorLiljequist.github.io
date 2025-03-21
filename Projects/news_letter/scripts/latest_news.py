@@ -15,7 +15,7 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT
 
 
 # Set up Chrome options
-CHROMEDRIVER_PATH = "/usr/local/bin/chromedriver"  # Adjust as needed
+CHROMEDRIVER_PATH = "/usr/local/bin/chromedriver" 
 NEWS_URL = "https://www.cnbc.com/"
 PDF_OUTPUT_FILE = "./scripts/news_report.pdf"
 
@@ -53,7 +53,7 @@ def scrape_news(driver):
         print(f"Error while scraping: {e}")
         return [], []
     finally:
-        driver.quit()  # Ensure browser is closed
+        driver.quit() 
 
 # ---- PDF GENERATION ----
 
@@ -83,16 +83,16 @@ def create_pdf(latest_news, trending_news):
 
         trending_table = Table(trending_data, colWidths=[40, 450])
         trending_table.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#2C3E50")),  # Header Background
-            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),  # Header Text Color
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#2C3E50")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),  
             ("ALIGN", (0, 0), (-1, -1), "LEFT"),
             ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
             ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
             ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
             ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.HexColor("#F9F9F9"), colors.white]),
             ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 10),  # Increase bottom padding
-            ('TOPPADDING', (0, 0), (-1, -1), 10),  # Increase top padding
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 10),  
+            ('TOPPADDING', (0, 0), (-1, -1), 10),  
         ]))
 
         story.append(trending_table)
@@ -108,16 +108,16 @@ def create_pdf(latest_news, trending_news):
 
         latest_table = Table(latest_data, colWidths=[40, 450])
         latest_table.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#2C3E50")),  # Header Background
-            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),  # Header Text Color
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#2C3E50")), 
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
             ("ALIGN", (0, 0), (-1, -1), "LEFT"),
             ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
             ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
             ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
             ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.HexColor("#F9F9F9"), colors.white]),
             ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 10),  # Increase bottom padding
-            ('TOPPADDING', (0, 0), (-1, -1), 10),  # Increase top padding
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 10),  
+            ('TOPPADDING', (0, 0), (-1, -1), 10), 
         ]))
 
         story.append(latest_table)
