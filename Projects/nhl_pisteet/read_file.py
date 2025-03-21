@@ -35,7 +35,7 @@ try:
     WebDriverWait(driver, 10).until(
         EC.presence_of_all_elements_located((By.CSS_SELECTOR, '.sc-hZxEoA, .iWQWig, .rt-td, .left-aligned, .pinned-column, .last-left-pinned-column'))
     )
-    rows = driver.find_elements(By.CSS_SELECTOR, '.sc-hZxEoA, .iWQWig, .rt-tr')  # Adjust the selector to match your table rows
+    rows = driver.find_elements(By.CSS_SELECTOR, '.sc-hZxEoA, .iWQWig, .rt-tr')  
     data = []
     
     for row in rows:
@@ -93,8 +93,8 @@ try:
 
     def sendEmail():
         sender_email = "totosnewsbot@gmail.com"
-        receiver_emails = ["victor.liljequist@gmail.com", "marcus.liljequist@gmail.com", "roope.liljequist@gmail.com", "josefiinapirhonen@gmail.com"]
-        password = "kovh mghi ohno epci" 
+        receiver_emails = [""]
+        password = "" 
         subject = "YÖN NHL PISTEET"
         body = ""
         output_file = "pisteet.png" 
