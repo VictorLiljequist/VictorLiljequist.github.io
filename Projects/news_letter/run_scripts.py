@@ -45,10 +45,10 @@ else:
 def sendEmail():
     sender_email = "totosnewsbot@gmail.com"
     receiver_email = "victor.liljequist@gmail.com"
-    password = "kovh mghi ohno epci"  # Use an app password, not your regular Gmail password
+    password = ""
     subject = "Market Report"
     body = "Please find the attached market data report."
-    output_file = "./scripts/final.pdf"  # Ensure this file exists in the correct path
+    output_file = "./scripts/final.pdf" 
 
     # Create the email message
     msg = MIMEMultipart()
